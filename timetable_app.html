@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>November 2026 Timetable — T07</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#657086;--line:#e4e8f0;--blue:#2563eb;--green:#059669;--purple:#7c3aed;--amber:#d97706;--red:#dc2626}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font-size:17px;margin:0;flex:1;min-width:220px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,button,input,textarea{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;font:inherit;color:var(--ink)}
+button{cursor:pointer}button:hover{border-color:#b9c2d4}
+.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:650}
+.danger{background:#fee2e2;border-color:#fecaca;color:#b91c1c;font-weight:650}
+main{max-width:1200px;margin:16px auto;padding:0 14px 50px}
+.view{display:none}.view.active{display:block}
+.nav{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.week-scroll{overflow-x:auto;padding-bottom:6px}
+.week-grid{display:grid;grid-template-columns:52px repeat(7,minmax(155px,1fr));gap:6px;min-width:1000px}
+.day-head{font-weight:700;font-size:13px;text-align:center;padding:8px 4px;background:#fff;border:1px solid var(--line);border-radius:10px}
+.time-label{font-size:11px;color:var(--muted);text-align:right;padding-top:2px}
+.day-col{display:flex;flex-direction:column;gap:6px;min-height:110px;background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:6px}
+.event{border-radius:10px;padding:8px;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(16,24,40,.15)}
+.event.custom{outline:2px dashed rgba(255,255,255,.65);outline-offset:-4px}
+.event b{display:block;font-size:11px;opacity:.92}.event span{display:block;font-size:12.5px;font-weight:650;line-height:1.25}
+.event small{display:block;font-size:10.5px;opacity:.92;margin-top:3px}
+.list{display:grid;gap:10px}
+.row{display:grid;grid-template-columns:100px 1fr;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer}
+.row .date{font-weight:750}.row .date small{display:block;color:var(--muted);font-weight:500}
+.badge{display:inline-block;font-size:11px;font-weight:750;padding:3px 8px;border-radius:999px;color:#fff;margin-bottom:5px}
+.course{font-weight:700}.meta{color:var(--muted);font-size:13px;margin-top:3px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+.chip.on{color:#fff}
+.today{outline:2px solid var(--blue);outline-offset:-2px}
+dialog{border:none;border-radius:16px;padding:0;max-width:460px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(2,6,23,.25)}
+dialog::backdrop{background:rgba(15,23,42,.45)}
+.modal{padding:20px}.modal h2{margin:0 0 12px;font-size:19px}
+.form{display:grid;gap:10px}.form label{font-size:13px;font-weight:650;display:block;margin-bottom:4px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form input,.form select,.form textarea{width:100%}
+.form textarea{min-height:70px;resize:vertical}
+.actions{display:flex;gap:8px;margin-top:6px}.actions button{flex:1}
+@media(max-width:520px){.form .two{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>📅 November 2026 — Your Timetable (T07)</h1>
+<div class="controls">
+<select id="viewSel"><option value="week">Week view</option><option value="list">List view</option></select>
+<button id="prevBtn">◀ Prev</button><strong id="weekLabel"></strong><button id="nextBtn">Next ▶</button>
+<button id="todayBtn">Today</button>
+<button id="addBtn" class="primary">＋ Add activity</button>
+</div>
+</header>
+<main>
+<div class="filters" id="filters"></div>
+<div id="weekView" class="view active"><div class="week-scroll"><div class="week-grid" id="weekGrid"></div></div></div>
+<div id="listView" class="view"><div class="list" id="list"></div></div>
+</main>
+
+<dialog id="addModal"><div class="modal">
+<h2>＋ Add activity</h2>
+<div class="form">
+<div><label>Title</label><input id="aTitle" placeholder="e.g. Study group / Gym / Appointment"></div>
+<div class="two">
+<div><label>Date</label><input id="aDate" type="date"></div>
+<div><label>Type</label><select id="aType"><option>Activity</option><option>Study</option><option>Meeting</option><option>Appointment</option><option>Exercise</option><option>Other</option></select></div>
+</div>
+<div class="two">
+<div><label>Start time</label><input id="aStart" type="time" value="12:00"></div>
+<div><label>End time</label><input id="aEnd" type="time" value="13:00"></div>
+</div>
+<div><label>Location / notes</label><input id="aVenue" placeholder="Optional"></div>
+<div><label>Details</label><textarea id="aNotes" placeholder="Optional"></textarea></div>
+<div><label>Colour</label><input id="aColor" type="color" value="#0ea5e9"></div>
+<div class="actions"><button id="cancelAdd">Cancel</button><button id="saveAdd" class="primary">Save activity</button></div>
+</div></div></dialog>
+
+<dialog id="modal"><div class="modal"><h2 id="mTitle"></h2><p id="mCourse"></p><p id="mTime"></p><p id="mVenue"></p><p id="mStaff"></p><div id="mCustomActions"></div><button class="close" onclick="modal.close()">Close</button></div></dialog>
+
+<script>
+const EVENTS = [["2026-11-02", "14:00", "16:00", "NURS N320F", "Lecture", "Quantitative Research (7): Data Statistical Analysis (b)", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-02", "16:00", "18:00", "NURS N325F", "Lecture", "Immunological Nursing – A&P; Assessment & Investigations", "HKMU C0G01", "Ivy"], ["2026-11-04", "12:00", "14:00", "NURS N310F", "Lecture", "Nursing's Pathway to Professionalism", "IOH F0201", "Ms. Angela Lee"], ["2026-11-04", "16:00", "18:00", "NURS N325F", "Lecture", "Immunological Nursing – Hypersensitivity; Allergic Disorder", "IOH F0201", "Ivy"], ["2026-11-06", "11:00", "13:00", "NURS N310F", "Quiz", "T07 Tutorial – Quiz 2: Ethical Dilemma (MCQ, 45 min)", "IOH F0318", "Hilda"], ["2026-11-06", "16:00", "18:00", "NURS N320F", "Lecture", "Quantitative Research (8): Interpretation of Research Findings", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-09", "12:00", "13:00", "NURS N325F", "Tutorial", "T07 Tutorial: Immunological Nursing (EYE)", "HKMU C0612", "Sandra"], ["2026-11-09", "14:00", "16:00", "NURS N320F", "Lecture", "Qualitative Research (1): Research Design", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-09", "16:00", "18:00", "NURS N325F", "Lecture", "Immunological Nursing – SLE", "HKMU C0G01", "Ivy"], ["2026-11-11", "12:00", "14:00", "NURS N310F", "Lecture", "Becoming a Professional Nurse: Defining Nursing & Socialization in Practice", "IOH F0201", "Ms. Angela Lee"], ["2026-11-11", "16:00", "18:00", "NURS N325F", "Lecture", "Immunological Nursing – AIDS", "IOH F0201", "Ivy"], ["2026-11-12", "09:00", "11:00", "NURS N310F", "Lecture", "Becoming a Professional Nurse (cont.)", "IOH F0201", "Ms. Angela Lee"], ["2026-11-12", "16:00", "18:00", "NURS N320F", "Tutorial", "T07 Tutorial 5: Critical Appraisal of Quantitative Research", "JCC D0718", "Dr. Jacky Chan"], ["2026-11-13", "09:00", "11:00", "NURS N325F", "Tutorial", "T07 Tutorial: Immunological Nursing (Immune)", "HKMU C0812", "Sandra"], ["2026-11-13", "16:00", "18:00", "NURS N320F", "Lecture", "Qualitative Research (2): Research Design", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-16", "14:00", "16:00", "NURS N320F", "Lecture", "Qualitative Research (3): Sampling", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-16", "16:00", "18:00", "NURS N325F", "Lecture", "Dermatological Nursing – A&P; Assessment; Acne Vulgaris", "HKMU C0G01", "Ivy"], ["2026-11-18", "12:00", "14:00", "NURS N310F", "Lecture", "Nurses, Patients & Families: Caring at the Intersection of Health & Illness", "IOH F0201", "Ms. Angela Lee"], ["2026-11-18", "16:00", "18:00", "NURS N325F", "Lecture", "Dermatological Nursing – Psoriasis; Dermatitis; Skin Infection", "IOH F0201", "Ivy"], ["2026-11-19", "09:00", "11:00", "NURS N310F", "Lecture", "Developing Nursing Judgment Through Critical Thinking 1", "IOH F0201", "Ms. Angela Lee"], ["2026-11-19", "16:00", "18:00", "NURS N320F", "Tutorial", "T07 Tutorial 6: Critical Appraisal of Qualitative Research", "JCC D0718", "Dr. Jacky Chan"], ["2026-11-20", "09:00", "11:00", "NURS N325F", "Tutorial", "T07 Tutorial: Dermatological Nursing (Dermat.)", "HKMU C0821", "Sandra"], ["2026-11-20", "11:00", "13:00", "NURS N310F", "Quiz", "T07 Tutorial – Quiz 3: Nursing Professionalism (MCQ & SQ, 45 min)", "IOH F0318", "Angela"], ["2026-11-20", "16:00", "18:00", "NURS N320F", "Lecture", "Qualitative Research (4): Data Collection", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-23", "14:00", "16:00", "NURS N320F", "Lecture", "Qualitative Research (5): Analysis", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-23", "16:00", "18:00", "NURS N325F", "Lecture", "Dermatological Nursing – Skin Tumour", "HKMU C0G01", "Ivy"], ["2026-11-25", "12:00", "14:00", "NURS N310F", "Seminar", "Lecture / Seminar 2: Nursing Professionalism", "IOH F0201", "–"], ["2026-11-25", "16:00", "18:00", "NURS N325F", "Lecture", "Dermatological Nursing – Burn", "IOH F0201", "Ivy"], ["2026-11-26", "16:00", "18:00", "NURS N320F", "Consultation", "T07 Facilitator Consult. (2): Group Presentation I (due 1 day prior)", "JCC D0718", "Dr. Jacky Chan"], ["2026-11-27", "16:00", "18:00", "NURS N320F", "Lecture", "Qualitative Research (6): Trustworthiness & Integrity", "IOH F0201", "Dr. Stanley Lam"], ["2026-11-30", "14:00", "16:00", "NURS N310F", "Lecture", "Developing Nursing Judgment Through Critical Thinking 2", "IOH F0201", "Ms. Angela Lee"], ["2026-11-30", "16:00", "18:00", "NURS N325F", "Lecture", "Dermatological Nursing – Burn + Consolidation", "HKMU C0G01", "Sandra"]];
+const COURSES = {"NURS N310F":"#2563eb","NURS N320F":"#059669","NURS N325F":"#7c3aed"};
+const TYPES = {"Lecture":"#2563eb","Tutorial":"#059669","Quiz":"#dc2626","Seminar":"#d97706","Consultation":"#7c3aed","Activity":"#0ea5e9","Study":"#8b5cf6","Meeting":"#0f766e","Appointment":"#db2777","Exercise":"#ea580c","Other":"#475569"};
+let activeCourses = new Set(Object.keys(COURSES));
+let currentMonday = mondayOf(new Date());
+let customEvents = JSON.parse(localStorage.getItem("t07_custom_events") || "[]");
+let selectedCustomId = null;
+
+function allEvents(){return EVENTS.concat(customEvents).sort((a,b)=>a[0].localeCompare(b[0])||a[1].localeCompare(b[1]))}
+function pad(n){return String(n).padStart(2,"0")}
+function isoDate(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function mondayOf(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const diff=(x.getDay()+6)%7;x.setDate(x.getDate()-diff);return x}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function fmtDate(d){return d.toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short"})}
+function saveCustom(){localStorage.setItem("t07_custom_events",JSON.stringify(customEvents))}
+
+function renderFilters(){
+  document.getElementById("filters").innerHTML=Object.entries(COURSES).map(([course,color])=>{
+    const on=activeCourses.has(course);
+    return `<button class="chip ${on?"on":""}" data-course="${course}" style="${on?`background:${color};border-color:${color}`:""}">${course}</button>`;
+  }).join("")+`<button class="chip ${activeCourses.has("Custom")?"on":""}" data-course="Custom" style="${activeCourses.has("Custom")?"background:#0ea5e9;border-color:#0ea5e9":""}">My activities</button>`;
+  document.querySelectorAll(".chip").forEach(btn=>btn.onclick=()=>{const c=btn.dataset.course;activeCourses.has(c)?activeCourses.delete(c):activeCourses.add(c);renderFilters();render()});
+}
+
+function render(){
+  const view=document.getElementById("viewSel").value;
+  document.getElementById("weekView").classList.toggle("active",view==="week");
+  document.getElementById("listView").classList.toggle("active",view==="list");
+  view==="week"?renderWeek():renderList();
+}
+
+function renderWeek(){
+  const grid=document.getElementById("weekGrid"), sunday=addDays(currentMonday,6);
+  document.getElementById("weekLabel").textContent=fmtDate(currentMonday)+" – "+fmtDate(sunday);
+  let html='<div></div>';
+  for(let i=0;i<7;i++){const d=addDays(currentMonday,i);html+=`<div class="day-head ${isoDate(d)===isoDate(new Date())?"today":""}">${d.toLocaleDateString("en-GB",{weekday:"short"})}<br><span style="font-weight:500;color:#657086">${pad(d.getDate())}/${pad(d.getMonth()+1)}</span></div>`}
+  for(let hour=8;hour<22;hour++){
+    html+=`<div class="time-label">${pad(hour)}:00</div>`;
+    for(let i=0;i<7;i++){
+      const date=isoDate(addDays(currentMonday,i));
+      const items=allEvents().filter(e=>e[0]===date&&visible(e)&&Number(e[1].slice(0,2))<=hour&&Number(e[2].slice(0,2))>hour).map(eventCard).join("");
+      html+=`<div class="day-col ${date===isoDate(new Date())?"today":""}">${items}</div>`;
+    }
+  }
+  grid.innerHTML=html;
+}
+
+function visible(e){return e[8] ? activeCourses.has("Custom") : activeCourses.has(e[3])}
+
+function eventCard(e){
+  const [date,start,end,course,type,topic,venue,staff,isCustom,color,id]=e;
+  const bg=isCustom?(color||"#0ea5e9"):COURSES[course];
+  const data=JSON.stringify(e).replace(/'/g,"&#39;");
+  return `<div class="event ${isCustom?"custom":""}" style="background:${bg}" onclick='showEvent(${data})'><b>${start}–${end}</b><span>${topic}</span><small>${isCustom?(type||"Activity")+" • "+(venue||"No location"):course+" • "+venue}</small></div>`;
+}
+
+function renderList(){
+  const rows=allEvents().filter(visible).map(e=>{
+    const [date,start,end,course,type,topic,venue,staff,isCustom,color]=e;
+    const d=new Date(date+"T00:00:00");
+    const data=JSON.stringify(e).replace(/'/g,"&#39;");
+    return `<div class="row" onclick='showEvent(${data})'><div class="date">${fmtDate(d)}<small>${start}–${end}</small></div><div>${badge(isCustom?type:"Lecture",isCustom?color:null)}<div class="course">${isCustom?topic:course}</div><div>${isCustom?"":topic}</div><div class="meta">📍 ${venue||"—"}${staff&&staff!=="–"?" • 👤 "+staff:""}</div></div></div>`;
+  }).join("");
+  document.getElementById("list").innerHTML=rows||"<p>No sessions selected.</p>";
+}
+
+function badge(type,color){return `<span class="badge" style="background:${color||TYPES[type]||"#475569"}">${type}</span>`}
+
+function showEvent(e){
+  const [date,start,end,course,type,topic,venue,staff,isCustom,color,id]=e;
+  const d=new Date(date+"T00:00:00");
+  mTitle.textContent=topic;
+  mCourse.innerHTML=badge(isCustom?(type||"Activity"):"Lecture",isCustom?color:null)+" "+(isCustom?"My activity":course);
+  mTime.textContent="🕒 "+fmtDate(d)+", "+start+"–"+end;
+  mVenue.textContent="📍 "+(venue||"—");
+  mStaff.textContent=staff&&staff!=="–"?"👤 "+staff:"";
+  mCustomActions.innerHTML=isCustom?`<div class="actions"><button class="danger" onclick='deleteCustom("${id}")'>Delete activity</button></div>`:"";
+  modal.showModal();
+}
+
+function deleteCustom(id){
+  customEvents=customEvents.filter(e=>e[10]!==id);
+  saveCustom();modal.close();renderFilters();render();
+}
+
+addBtn.onclick=()=>{aDate.value=isoDate(new Date());addModal.showModal()};
+cancelAdd.onclick=()=>addModal.close();
+saveAdd.onclick=()=>{
+  const title=aTitle.value.trim(), date=aDate.value, start=aStart.value, end=aEnd.value;
+  if(!title||!date||!start||!end||end<=start){alert("Please enter a title, date, and an end time later than the start time.");return}
+  customEvents.push([date,start,end,"Custom",aType.value,title,aVenue.value.trim(),aNotes.value.trim(),true,aColor.value,"custom-"+Date.now()]);
+  saveCustom();addModal.close();aTitle.value="";aVenue.value="";aNotes.value="";
+  activeCourses.add("Custom");renderFilters();render();
+  const chosen=new Date(date+"T00:00:00");currentMonday=mondayOf(chosen);
+  document.getElementById("viewSel").value="week";render();
+};
+
+document.getElementById("viewSel").onchange=render;
+prevBtn.onclick=()=>{currentMonday=addDays(currentMonday,-7);renderWeek()};
+nextBtn.onclick=()=>{currentMonday=addDays(currentMonday,7);renderWeek()};
+todayBtn.onclick=()=>{currentMonday=mondayOf(new Date());renderWeek()};
+
+renderFilters();render();
+</script>
+</body>
+</html>
